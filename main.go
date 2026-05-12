@@ -21,7 +21,6 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-var dbPath = "CameraManufacturers.db"
 var manufacturerStruct = customstruct.ManList()
 
 const wiresharkURL string = "https://www.wireshark.org/download/automated/data/manuf"

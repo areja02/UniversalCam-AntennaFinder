@@ -1,6 +1,6 @@
 # UniversalCam-AntennaFinder
-This is base code application I've created to assist with finding multiple different manufacturer devices. This can be used to find Ubiquiti, Axis, Bosch etc.
-Work is still being done, currently only a basic CLI application. Planning for future integration of filters, manufacturer selection and an easy to navigate GUI.
+The basis of the application I've created is to assist with finding multiple devices from specific Commercial Manufacturers. This can be used to find Commercial Devices such as Ubiquiti, Axis, Bosch etc.
+Work is still being done, currently only a basic CLI application. Planning for future integration of Manufacturer selection through checkboxes and an easy to navigate GUI.
 
 Please go to https://github.com/areja02/UniversalCam-AntennaFinder/releases for the executable download as well as source code for download.
 

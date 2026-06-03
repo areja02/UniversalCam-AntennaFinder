@@ -3,13 +3,13 @@ package wireshark
 import (
 	"bufio"
 	"fmt"
-	customstruct "gopackettrial/CustomStruct"
+	database "fyneapp/Database"
 	"os"
 	"strings"
 )
 
-func ParseWiresharkOUIFile(file *string, parsedStruct []customstruct.CustomStruct) []customstruct.CustomStruct {
-	var newList []customstruct.CustomStruct
+func ParseWiresharkOUIFile(file *string, parsedStruct []database.CustomStruct) []database.CustomStruct {
+	var newList []database.CustomStruct
 	acceptedManufactuers := []string{"AXIS COMMUNICATION", "BOSCH SECURITY", "MIMOSA", "I3 INTERNATIONAL", "HIKVISION", "I-PRO CO", "PANASONIC", "VCS VIDEO", "SIKLU", "UBIQUITI"}
 	manufFile := &file
 	parsedFile, err := os.Open(**manufFile)
@@ -40,7 +40,7 @@ func ParseWiresharkOUIFile(file *string, parsedStruct []customstruct.CustomStruc
 				}
 			}
 			if specificManufacturer {
-				newList = append(newList, customstruct.CustomStruct{
+				newList = append(newList, database.CustomStruct{
 					Oui: Oui, ManShortName: ShortName, ManLongName: LongName})
 			}
 		}

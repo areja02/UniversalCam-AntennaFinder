@@ -1,4 +1,4 @@
-package customstruct
+package database
 
 type CustomStruct struct {
 	Oui          string

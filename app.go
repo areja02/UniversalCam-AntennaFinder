@@ -133,43 +133,56 @@ var manufFile *string = &manufFilePTR
 var manuString *string
 var currentlyScanning bool
 var quitGoRoutine = make(chan struct{})
+var lines []string
 
 const wiresharkURL string = "https://www.wireshark.org/download/automated/data/manuf"
 const internetConnURL string = "https://www.wireshark.org"
+const maxbufferSize = 20
 
 func main() {
 	a := app.New()
 	myWindow := a.NewWindow("Device Discovery Application")
 	textConsole := widget.NewTextGrid()
 	scrollPane := container.NewScroll(textConsole)
-	const maxbufferSize = 20
 
+	//Button Used To Clear The Data
 	clearScreenButton = widget.NewButton("Clear Screen", func() {
 		fyne.Do(func() { textConsole.SetText(" ") })
 	})
 
+	//Button Used To Update The Local Database
 	updateDatabaseButton = widget.NewButton("Update Database", func() {
+		//Disabling All Buttons till either error out or update is complete
 		updateDatabaseButton.Disable()
 		scanButton.Disable()
 		clearScreenButton.Disable()
 
 		go func() {
+			//Enabling Buttons Upon Completion / Error
 			defer fyne.Do(func() {
 				updateDatabaseButton.Enable()
 				scanButton.Enable()
 				clearScreenButton.Enable()
 			})
+			/*
+				Checks if there is internet connection. Will notify if there isn't any to update the database.
+				If there is internet, will download the latest Manuf file from wireshark's
+				website then parses the file to only retrieve the manufacturers specified in
+				the wireshark package. Once parsing is complete, application will remove
+				the downloaded Manuf File and unlock the application.
+			*/
 			if !checkInternetConn() {
 				fyne.Do(func() {
-					textConsole.SetText("No Internet connecttion")
+					textConsole.SetText("No Internet connection \n Utilizing local Database..")
 					return
 				})
 			}
 			if checkInternetConn() == true {
-				wiresharkDownload := downloadWireSharkOUIFile()
 				fyne.Do(func() {
 					textConsole.SetText("Downloading Manuf File..")
 				})
+				wiresharkDownload := downloadWireSharkOUIFile()
+
 				if wiresharkDownload != nil {
 					fyne.Do(func() { textConsole.SetText("Manuf File Currently In Use...") })
 				}
@@ -197,12 +210,17 @@ func main() {
 		}()
 	})
 
+	//Button Used For Scanning For Devices.
 	scanButton = widget.NewButton("Start Scan", func() {
+		updateDatabaseButton.Disable()
 		if !currentlyScanning {
 			quitGoRoutine = make(chan struct{})
 			currentlyScanning = true
 			scanButton.SetText("Stop")
 			go func() {
+				defer fyne.Do(func() {
+					updateDatabaseButton.Enable()
+				})
 
 				handle, err := pcap.OpenLive(retrieveAdapterName(), 1600, true, pcap.BlockForever)
 				if err != nil {
@@ -229,8 +247,8 @@ func main() {
 									return
 								} else {
 									newLog = fmt.Sprintf("IP: %v | MAC: %v | %v\n", ipAddress, macAddress, *manuString)
+									lines = strings.Split(textConsole.Text(), "\n")
 
-									lines := strings.Split(textConsole.Text(), "\n")
 									lines = append(lines, newLog)
 									if len(lines) > maxbufferSize {
 										lines = lines[len(lines)-maxbufferSize:]
@@ -238,6 +256,7 @@ func main() {
 									textConsole.SetText(strings.Join(lines, "\n"))
 									scrollPane.ScrollToBottom()
 									time.Sleep(20 * time.Millisecond)
+
 								}
 							}
 						})

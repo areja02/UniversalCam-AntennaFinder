@@ -218,6 +218,9 @@ func main() {
 			currentlyScanning = true
 			scanButton.SetText("Stop")
 			go func() {
+				fyne.Do(func() {
+					textConsole.SetText("")
+				})
 				defer fyne.Do(func() {
 					updateDatabaseButton.Enable()
 				})

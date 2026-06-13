@@ -212,6 +212,9 @@ func ManList() []CustomStruct {
 		{Oui: "FA:93:05", ManShortName: "PanasonicAut", ManLongName: "Panasonic Automotive Systems Co., Ltd."},
 		{Oui: "FC:9F:FD", ManShortName: "HikvisionDig", ManLongName: "Hangzhou Hikvision Digital Technology Co.,Ltd."},
 		{Oui: "FC:EC:DA", ManShortName: "Ubiquiti", ManLongName: "Ubiquiti Inc"},
+		{Oui: "44:B4:23", ManShortName: "HanwhaVision", ManLongName: "Hanwha Vision Vietnam Company Limited"},
+		{Oui: "8C:1D:55", ManShortName: "HanwhaNxMD", ManLongName: "Hanwha NxMD (Thailand) Co., Ltd."},
+		{Oui: "E4:30:22", ManShortName: "HanwhaVision", ManLongName: "Hanwha Vision VietNam"},
 	}
 	return ManufacturerList
 

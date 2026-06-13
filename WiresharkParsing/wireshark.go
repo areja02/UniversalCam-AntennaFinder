@@ -10,7 +10,7 @@ import (
 
 func ParseWiresharkOUIFile(file *string, parsedStruct []database.CustomStruct) []database.CustomStruct {
 	var newList []database.CustomStruct
-	acceptedManufactuers := []string{"AXIS COMMUNICATION", "BOSCH SECURITY", "MIMOSA", "I3 INTERNATIONAL", "HIKVISION", "I-PRO CO", "PANASONIC", "VCS VIDEO", "SIKLU", "UBIQUITI"}
+	acceptedManufactuers := []string{"AXIS COMMUNICATION", "BOSCH SECURITY", "MIMOSA", "I3 INTERNATIONAL", "HIKVISION", "I-PRO CO", "PANASONIC", "VCS VIDEO", "SIKLU", "UBIQUITI", "HANWHA"}
 	manufFile := &file
 	parsedFile, err := os.Open(**manufFile)
 	if err != nil {

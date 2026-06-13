@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -134,6 +135,7 @@ var manuString *string
 var currentlyScanning bool
 var quitGoRoutine = make(chan struct{})
 var lines []string
+var manufacturerListSelection = []string{"AXIS COMMUNICATION", "BOSCH SECURITY", "MIMOSA", "I3 INTERNATIONAL", "HIKVISION", "I-PRO CO", "HANWHA", "PANASONIC", "VCS VIDEO", "SIKLU", "UBIQUITI"}
 
 const wiresharkURL string = "https://www.wireshark.org/download/automated/data/manuf"
 const internetConnURL string = "https://www.wireshark.org"
@@ -142,13 +144,40 @@ const maxbufferSize = 20
 func main() {
 	a := app.New()
 	myWindow := a.NewWindow("Device Discovery Application")
-	textConsole := widget.NewTextGrid()
-	scrollPane := container.NewScroll(textConsole)
+	screenListings := widget.NewList(
+		func() int {
+			return len(lines)
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("")
+		},
+		func(id widget.ListItemID, item fyne.CanvasObject) {
+			item.(*widget.Label).SetText(lines[id])
+		},
+	)
 
 	//Button Used To Clear The Data
 	clearScreenButton = widget.NewButton("Clear Screen", func() {
-		fyne.Do(func() { textConsole.SetText(" ") })
+		fyne.Do(func() {
+			lines = []string{}
+			screenListings.Refresh()
+		})
 	})
+
+	/*
+		Checkbox selections on the manufacturers you want to see.
+		Created an all checkbox, which is enabled by default. Can uncheck and select the specific ones you wish to see.
+	*/
+	manufacturerCheckBoxSelection := widget.NewCheckGroup(manufacturerListSelection, func(selected []string) {
+	})
+	checkAllManufacturerSelection := widget.NewCheck("All", func(checked bool) {
+		if checked {
+			manufacturerCheckBoxSelection.SetSelected(manufacturerListSelection)
+		} else {
+			manufacturerCheckBoxSelection.SetSelected([]string{})
+		}
+	})
+	checkAllManufacturerSelection.SetChecked(true)
 
 	//Button Used To Update The Local Database
 	updateDatabaseButton = widget.NewButton("Update Database", func() {
@@ -156,13 +185,16 @@ func main() {
 		updateDatabaseButton.Disable()
 		scanButton.Disable()
 		clearScreenButton.Disable()
-
+		checkAllManufacturerSelection.Disable()
+		manufacturerCheckBoxSelection.Disable()
 		go func() {
 			//Enabling Buttons Upon Completion / Error
 			defer fyne.Do(func() {
 				updateDatabaseButton.Enable()
 				scanButton.Enable()
 				clearScreenButton.Enable()
+				checkAllManufacturerSelection.Enable()
+				manufacturerCheckBoxSelection.Enable()
 			})
 			/*
 				Checks if there is internet connection. Will notify if there isn't any to update the database.
@@ -173,37 +205,50 @@ func main() {
 			*/
 			if !checkInternetConn() {
 				fyne.Do(func() {
-					textConsole.SetText("No Internet connection \n Utilizing local Database..")
+					lines = append(lines, "No internet Connection \n Please proceed with scanning..")
 					return
 				})
 			}
 			if checkInternetConn() == true {
 				fyne.Do(func() {
-					textConsole.SetText("Downloading Manuf File..")
+					lines = []string{}
+					screenListings.Refresh()
+				})
+				fyne.Do(func() {
+					lines = append(lines, "Downloading Manuf File..")
+					screenListings.Refresh()
 				})
 				wiresharkDownload := downloadWireSharkOUIFile()
 
 				if wiresharkDownload != nil {
-					fyne.Do(func() { textConsole.SetText("Manuf File Currently In Use...") })
+					fyne.Do(func() {
+						lines = append(lines, "Manuf File Currently In Use...")
+						screenListings.Refresh()
+					})
 				}
 				fyne.Do(func() {
-					textConsole.SetText("Please Wait..")
+					lines = append(lines, "Please Wait..")
+					screenListings.Refresh()
 				})
 				manufacturerStruct = wireshark.ParseWiresharkOUIFile(&manufFilePTR, manufacturerStruct)
 				fyne.Do(func() {
-					textConsole.SetText("Updating Database..")
+					lines = append(lines, "Updating Database..")
+					screenListings.Refresh()
 				})
 				time.Sleep(30 * time.Second)
 				fyne.Do(func() {
-					textConsole.SetText("Update Complete.. Removing Manuf File..")
+					lines = append(lines, "Update Complete.. Removing Manuf File..")
+					screenListings.Refresh()
 				})
 				if err := downloadedFileRemovalRetry("manuf"); err != nil {
 					fyne.Do(func() {
-						textConsole.SetText("Failed to remove Manuf File after retries")
+						lines = append(lines, "Failed to remove Manuf File after retries")
+						screenListings.Refresh()
 					})
 				} else {
 					fyne.Do(func() {
-						textConsole.SetText("Manuf File Removed Successfully... \nDatabase Update has Completed. Please begin scanning.")
+						lines = append(lines, "Manuf File Removed Successfully... \n\nDatabase Update has Completed. Please begin scanning.")
+						screenListings.Refresh()
 					})
 				}
 			}
@@ -212,17 +257,24 @@ func main() {
 
 	//Button Used For Scanning For Devices.
 	scanButton = widget.NewButton("Start Scan", func() {
+		//Initial lines simply disable certain functions during scanninng, as well as clears
+		//The window. Enables the options once scanning stops.
 		updateDatabaseButton.Disable()
+		checkAllManufacturerSelection.Disable()
+		manufacturerCheckBoxSelection.Disable()
 		if !currentlyScanning {
 			quitGoRoutine = make(chan struct{})
 			currentlyScanning = true
 			scanButton.SetText("Stop")
 			go func() {
 				fyne.Do(func() {
-					textConsole.SetText("")
+					lines = []string{}
+					screenListings.Refresh()
 				})
 				defer fyne.Do(func() {
 					updateDatabaseButton.Enable()
+					checkAllManufacturerSelection.Enable()
+					manufacturerCheckBoxSelection.Enable()
 				})
 
 				handle, err := pcap.OpenLive(retrieveAdapterName(), 1600, true, pcap.BlockForever)
@@ -235,6 +287,17 @@ func main() {
 					panic(err)
 				}
 
+				//Ensures at least one checkbox is selected before allowing to scan
+				fyne.Do(func() {
+					if len(manufacturerCheckBoxSelection.Selected) == 0 {
+						currentlyScanning = false
+						close(quitGoRoutine)
+						scanButton.SetText("Start Scanning")
+						lines = append(lines, "Please Select At Least One Manufacturer Before Scanning")
+						screenListings.Refresh()
+					}
+				})
+
 				packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 				for packet := range packetSource.Packets() {
 					select {
@@ -242,29 +305,40 @@ func main() {
 						return
 					default:
 						fyne.Do(func() {
+							//Packet Capturing Process
 							var newLog string
 							macAddress := layer2Packets(packet)
 							ipAddress := ipv4Packets(packet)
+
 							if checkOUI(macAddress) {
 								if ipAddress == "" {
 									return
 								} else {
 									newLog = fmt.Sprintf("IP: %v | MAC: %v | %v\n", ipAddress, macAddress, *manuString)
-									lines = strings.Split(textConsole.Text(), "\n")
-
-									lines = append(lines, newLog)
-									if len(lines) > maxbufferSize {
-										lines = lines[len(lines)-maxbufferSize:]
+									//Evaluating whether the found packets are selected and are not already being shown
+									//On the window.
+									for _, item := range manufacturerCheckBoxSelection.Selected {
+										if strings.Contains(strings.ToUpper(*manuString), item) {
+											if !slices.Contains(lines, newLog) {
+												lines = append(lines, newLog)
+											} else {
+												return
+											}
+											if len(lines) > maxbufferSize {
+												lines = lines[len(lines)-maxbufferSize:]
+											}
+											screenListings.Refresh()
+											time.Sleep(20 * time.Millisecond)
+										}
 									}
-									textConsole.SetText(strings.Join(lines, "\n"))
-									scrollPane.ScrollToBottom()
-									time.Sleep(20 * time.Millisecond)
 
 								}
 							}
 						})
 					}
+
 				}
+
 			}()
 		} else {
 			close(quitGoRoutine)
@@ -274,9 +348,9 @@ func main() {
 
 	})
 
-	mainWindow := container.NewBorder(container.NewVBox(container.NewGridWithColumns(3, scanButton, updateDatabaseButton, clearScreenButton)), nil, nil, nil, scrollPane)
+	mainWindow := container.NewBorder(container.NewVBox(container.NewGridWithColumns(3, scanButton, updateDatabaseButton, clearScreenButton)), nil, container.NewVBox(checkAllManufacturerSelection, manufacturerCheckBoxSelection), nil, screenListings)
 	myWindow.SetContent(mainWindow)
-	myWindow.Resize(fyne.NewSize(500, 300))
+	myWindow.Resize(fyne.NewSize(800, 500))
 	myWindow.ShowAndRun()
 
 }

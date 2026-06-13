@@ -3,8 +3,11 @@ The basis of the application I've created is to assist with finding multiple dev
 Application is a simple app with an easy to navigate UI.
 
 Application Features include:
--Online Database Update (Downlaods TXT file from online into the current directory of the app, parses the file then deletes it. Database reverts back to initial local state upon closing the app.)
+
+-Online Database Update (Downloads a TXT file from online into the current directory of the app, parses the file then deletes it. Database reverts back to initial local state upon closing the app.)
+
 -Clear Screen (Clears all information displayed in the window)
+
 -Manufacturer Selection (Checkboxes to allow you to scan only for the specific manufacturer you are looking for)
 
 
